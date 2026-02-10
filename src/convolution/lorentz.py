@@ -25,8 +25,9 @@ def prepare_energy_bins(
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def convolve_lorentzian(
-        energy: np.ndarray, e1: np.ndarray, e2: np.ndarray,
+def convolve_lorentzian_prepared(
+        energy: np.ndarray,
+        e1: np.ndarray, e2: np.ndarray,
         xanes: np.ndarray,
         gammas: np.ndarray,
         E_Fermi: float
@@ -73,3 +74,25 @@ def convolve_lorentzian(
         convoluted[ie] = -integral * inv_pi
 
     return convoluted
+
+@njit(cache=True)
+def convolve_lorentzian(
+        energy: np.ndarray,
+        xanes: np.ndarray,
+        gammas: np.ndarray,
+        E_Fermi: float
+    ) -> np.ndarray:
+    """
+    Lorentzian convolution using integral formula from Fortran cflor subroutine.
+    
+    Note: Convolution runs over ALL energy points, but integration only 
+    includes states above Fermi (unoccupied states).
+    """
+    e1, e2 = prepare_energy_bins(energy=energy)
+    convolution = convolve_lorentzian_prepared(
+        energy=energy, e1=e1, e2=e2,
+        xanes=xanes, gammas=gammas,
+        E_Fermi=E_Fermi
+    )
+
+    return convolution

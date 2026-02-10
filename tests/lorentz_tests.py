@@ -4,11 +4,13 @@ import numpy as np
 
 from convolution.tail import extend_spectrum_tail
 from convolution.broadening import calculate_broadening_parameters
-from convolution.lorentz import prepare_energy_bins, convolve_lorentzian
+from convolution.lorentz import (
+    prepare_energy_bins, convolve_lorentzian_prepared,
+    convolve_lorentzian
+)
 
 
-
-class TestPerformanceConvolveLorentzian:
+class TestPerformanceLorentz:
     """Performance tests for calculate_broadening_parameters function."""
     
     def setup_method(self):
@@ -30,12 +32,17 @@ class TestPerformanceConvolveLorentzian:
             self.E_cent, self.E_larg,
             self.E_Fermi
         )
-        self.e1, self.e2 = prepare_energy_bins(
-            energy=self.extended_energy
-            )
+
+        self.e1, self.e2 = prepare_energy_bins(energy=self.extended_energy)
         
         # Warm up the JIT compiler
         _ = convolve_lorentzian(
+            energy=self.extended_energy,
+            xanes=self.extended_xanes,
+            gammas=self.broadening,
+            E_Fermi=self.E_Fermi
+        )
+        _ = convolve_lorentzian_prepared(
             energy=self.extended_energy, e1=self.e1, e2=self.e2,
             xanes=self.extended_xanes,
             gammas=self.broadening,
@@ -49,6 +56,26 @@ class TestPerformanceConvolveLorentzian:
         start_time = time.perf_counter()
         for _ in range(n_calls):
             result = convolve_lorentzian(
+                energy=self.extended_energy,
+                xanes=self.extended_xanes,
+                gammas=self.broadening,
+                E_Fermi=self.E_Fermi
+            )
+        end_time = time.perf_counter()
+        
+        total_time = end_time - start_time
+        avg_time = total_time / n_calls
+        calls_per_second = n_calls / total_time
+        
+        print(f"\n\n{convolve_lorentzian.__name__}()")
+        print(f" Performance with {n_calls} calls:")
+        print(f"  Total time: {total_time:.3f} s")
+        print(f"  Average per call: {avg_time * 1e6:.2f} µs")
+        print(f"  Calls per second: {calls_per_second:.0f}")
+
+        start_time = time.perf_counter()
+        for _ in range(n_calls):
+            result = convolve_lorentzian_prepared(
                 energy=self.extended_energy, e1=self.e1, e2=self.e2,
                 xanes=self.extended_xanes,
                 gammas=self.broadening,
@@ -60,8 +87,8 @@ class TestPerformanceConvolveLorentzian:
         avg_time = total_time / n_calls
         calls_per_second = n_calls / total_time
         
-        print(f"\n{calculate_broadening_parameters.__name__}\n")
-        print(f"\nPerformance with {n_calls} calls:")
+        print(f"\n\n{convolve_lorentzian_prepared.__name__}()")
+        print(f" Performance with {n_calls} calls:")
         print(f"  Total time: {total_time:.3f} s")
         print(f"  Average per call: {avg_time * 1e6:.2f} µs")
         print(f"  Calls per second: {calls_per_second:.0f}")
@@ -70,7 +97,7 @@ class TestPerformanceConvolveLorentzian:
 if __name__ == "__main__":
     print("\nRunning performance test...")
     
-    perf_class = TestPerformanceConvolveLorentzian()
+    perf_class = TestPerformanceLorentz()
     perf_class.setup_method()
     
     perf_methods = [

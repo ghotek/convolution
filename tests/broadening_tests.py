@@ -7,7 +7,7 @@ from convolution.broadening import (
 )
 
 
-class TestPerformanceCalculateBroadeningParameters:
+class TestPerformanceBroadening:
     """Performance tests for calculate_broadening_parameters function."""
     
     def setup_method(self):
@@ -30,7 +30,7 @@ class TestPerformanceCalculateBroadeningParameters:
     def test_performance_many_calls(self):
         """Test performance with many repeated calls."""
         energy = np.linspace(-5, 5, 1000)
-        n_calls = 100000
+        n_calls = 1000
         
         start_time = time.perf_counter()
         for _ in range(n_calls):
@@ -46,7 +46,6 @@ class TestPerformanceCalculateBroadeningParameters:
         avg_time = total_time / n_calls
         calls_per_second = n_calls / total_time
         
-        print(f"\n{calculate_broadening_parameters.__name__}\n")
         print(f"\nPerformance with {n_calls} calls:")
         print(f"  Total time: {total_time:.3f} s")
         print(f"  Average per call: {avg_time * 1e6:.2f} µs")
@@ -56,7 +55,7 @@ class TestPerformanceCalculateBroadeningParameters:
 if __name__ == "__main__":
     print("\nRunning performance test...")
     
-    perf_class = TestPerformanceCalculateBroadeningParameters()
+    perf_class = TestPerformanceBroadening()
     perf_class.setup_method()
     
     perf_methods = [

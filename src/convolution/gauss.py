@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 from numba import njit, prange
@@ -7,7 +9,7 @@ from numba import njit, prange
 def prepare_gauss(
         energy: np.ndarray,
         xanes: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, int]:
+    ) -> tuple[np.ndarray, np.ndarray, int, int, np.ndarray]:
     nenerg = len(energy)
     nj = 10
     
@@ -37,14 +39,16 @@ def prepare_gauss(
     if nj + nenerg > 1:
         de[nj + nenerg - 1] = Ef[nj + nenerg - 1] - Ef[nj + nenerg - 2]
 
-    return Ef, Xa, de, nenerg, nj
+    return Ef, de, nenerg, nj, Xa
 
 @njit(parallel=True, fastmath=True, cache=True)
-def convolve_gaussian(
-        Ef: np.ndarray, Xa: np.ndarray, de: np.ndarray,
+def convolve_gaussian_prepared(
+        Ef: np.ndarray,
+        de: np.ndarray,
         nenerg: int, nj: int,
-        sigma: float,
-        E_cut: float = 0.0,
+        Xa: np.ndarray,
+        E_cut: float,
+        sigma_gauss: float,
         vibration: float = 0.0
     ) -> np.ndarray:
     
@@ -52,12 +56,13 @@ def convolve_gaussian(
 
     Y_out = np.empty(nenerg)
 
-    fwhm = sigma / 2.3548200450309493
+    fwhm = sigma_gauss / 2.3548200450309493
     for ie in prange(nenerg):
         ie_py = nj + ie
 
         vib = 2.0 * vibration * (Ef[ie_py] - E_cut + 0.5)
         vib = max(0.0, vib)
+
         b = fwhm + vib
         inv_b = 1.0 / b
         
@@ -65,7 +70,7 @@ def convolve_gaussian(
             Y_out[ie] = Xa[ie_py]
             continue
         
-        gaus = np.zeros(total_size)
+        gaus_acc = 0.0
         Pdt = 0.0
         
         for je_py in range(nj + nenerg):
@@ -110,15 +115,35 @@ def convolve_gaussian(
                 
                 fac = -0.5 * ((E - Ef[ie_py]) * inv_b)**2
                 if fac > -600.0:
-                    efac = np.exp(fac)
-                    gaus[je_py] += efac * Yint
+                    efac = math.exp(fac)
+                    gaus_acc += efac * Yint * inv_n_sub * de[je_py]
                     Pdt += efac * de[je_py] * inv_n_sub
             
-            gaus[je_py] = (gaus[je_py] * inv_n_sub) * de[je_py]
-        
         if Pdt > 1e-30:
-            Y_out[ie] = np.sum(gaus[0:nj + nenerg]) / Pdt
+            Y_out[ie] = gaus_acc / Pdt
         else:
             Y_out[ie] = Xa[ie_py]
     
     return Y_out
+
+@njit(cache=True)
+def convolve_gaussian(
+        energy: np.ndarray,
+        xanes:  np.ndarray,
+        E_cut: float,
+        sigma_gauss: float,
+        vibration: float = 0.0
+    ) -> np.ndarray:
+    Ef, de, nenerg, nj, Xa = prepare_gauss(
+        energy=energy, xanes=xanes
+        )
+    convolution = convolve_gaussian_prepared(
+        Ef=Ef, de=de,
+        nenerg=nenerg, nj=nj,
+        Xa=Xa,
+        E_cut=E_cut,
+        sigma_gauss=sigma_gauss,
+        vibration=vibration
+    )
+
+    return convolution
