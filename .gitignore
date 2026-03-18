@@ -1,8 +1,27 @@
+# Python
+/*.py
+/*.py[cod]
+**/__pycache__/
+
+# Virtual environments
+.devenv/
+devenv/
+.buildenv/
+buildenv/
+.venv/
+venv/
+.env/
 env/
 
-src/convolution/__pycache__/
-tests/__pycache__/
+# IDEs
+.vscode/
 
+# Pytest
 .pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache
 
+
+# PyEnv
 .python-version
