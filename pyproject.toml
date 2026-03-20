@@ -1,11 +1,10 @@
 [project]
 name = "convolution"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = [
     {name = "ghotek",email = "shamiunov.km@phystech.edu"}
 ]
-license = {text = "MIT"}
 requires-python = ">=3.12"
 dependencies = [
     "numpy (<2.4)",
