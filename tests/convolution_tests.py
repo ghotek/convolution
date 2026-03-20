@@ -2,19 +2,19 @@ import time
 
 import numpy as np
 
-from convolution.tail import extend_spectrum_tail
 from convolution.broadening import calculate_broadening_parameters
-from convolution.lorentz import prepare_energy_bins, convolve_lorentzian_prepared
-from convolution.convolution import convolve_prepared, convolve
+from convolution.convolution import convolve, convolve_prepared
+from convolution.lorentz import convolve_lorentzian_prepared, prepare_energy_bins
+from convolution.tail import extend_spectrum_tail
 
 
 class TestPerformanceGauss:
     """Performance tests for calculate_broadening_parameters function."""
-    
+
     def setup_method(self):
         """Setup for performance tests."""
         self.energy = np.linspace(-10.0, 60.0, 1000)
-        self.xanes  = np.random.uniform(0.0, 1.0, size=len(self.energy))
+        self.xanes = np.random.uniform(0.0, 1.0, size=len(self.energy))
 
         self.gamma_hole = 1.0
         self.gamma_max = 15.0
@@ -22,58 +22,70 @@ class TestPerformanceGauss:
         self.E_larg = 30.0
         self.E_Fermi = 0.0
         self.sigma_gauss = 1.0
-        
+
         self.extended_energy, self.extended_xanes = extend_spectrum_tail(
             energy=self.energy, xanes=self.xanes, n_tail=500
-            )
+        )
         self.broadening = calculate_broadening_parameters(
-            self.extended_energy, self.gamma_hole, self.gamma_max,
-            self.E_cent, self.E_larg,
-            self.E_Fermi
+            self.extended_energy,
+            self.gamma_hole,
+            self.gamma_max,
+            self.E_cent,
+            self.E_larg,
+            self.E_Fermi,
         )
 
         self.e1, self.e2 = prepare_energy_bins(energy=self.extended_energy)
-        
+
         # Warm up the JIT compiler
         _ = convolve(
             energy=self.energy,
             xanes=self.xanes,
-            gamma_hole=self.gamma_hole, gamma_max=self.gamma_max,
-            E_cent=self.E_cent, E_larg=self.E_larg,
+            gamma_hole=self.gamma_hole,
+            gamma_max=self.gamma_max,
+            E_cent=self.E_cent,
+            E_larg=self.E_larg,
             E_Fermi=self.E_Fermi,
-            sigma_gauss=self.sigma_gauss , vibration=0.0
+            sigma_gauss=self.sigma_gauss,
+            vibration=0.0,
         )
         _ = convolve_prepared(
             extended_energy=self.extended_energy,
-            e1=self.e1, e2=self.e2,
+            e1=self.e1,
+            e2=self.e2,
             extended_xanes=self.extended_xanes,
-            gamma_hole=self.gamma_hole, gamma_max=self.gamma_max,
-            E_cent=self.E_cent, E_larg=self.E_larg,
+            gamma_hole=self.gamma_hole,
+            gamma_max=self.gamma_max,
+            E_cent=self.E_cent,
+            E_larg=self.E_larg,
             E_Fermi=self.E_Fermi,
-            sigma_gauss=self.sigma_gauss , vibration=0.0
+            sigma_gauss=self.sigma_gauss,
+            vibration=0.0,
         )
-    
-    
+
     def test_performance_many_calls(self):
         """Test performance with many repeated calls."""
         n_calls = 1000
-        
+
         start_time = time.perf_counter()
         for _ in range(n_calls):
             result = convolve(
                 energy=self.energy,
                 xanes=self.xanes,
-                gamma_hole=self.gamma_hole, gamma_max=self.gamma_max,
-                E_cent=self.E_cent, E_larg=self.E_larg,
+                gamma_hole=self.gamma_hole,
+                gamma_max=self.gamma_max,
+                E_cent=self.E_cent,
+                E_larg=self.E_larg,
                 E_Fermi=self.E_Fermi,
-                sigma_gauss=self.sigma_gauss , vibration=0.0
+                sigma_gauss=self.sigma_gauss,
+                vibration=0.0,
             )
         end_time = time.perf_counter()
-        
+
         total_time = end_time - start_time
         avg_time = total_time / n_calls
         calls_per_second = n_calls / total_time
-        
+
         print(f"\n\n{convolve.__name__}()")
         print(f" Performance with {n_calls} calls:")
         print(f"  Total time: {total_time:.3f} s")
@@ -84,19 +96,23 @@ class TestPerformanceGauss:
         for _ in range(n_calls):
             result = convolve_prepared(
                 extended_energy=self.extended_energy,
-                e1=self.e1, e2=self.e2,
+                e1=self.e1,
+                e2=self.e2,
                 extended_xanes=self.extended_xanes,
-                gamma_hole=self.gamma_hole, gamma_max=self.gamma_max,
-                E_cent=self.E_cent, E_larg=self.E_larg,
+                gamma_hole=self.gamma_hole,
+                gamma_max=self.gamma_max,
+                E_cent=self.E_cent,
+                E_larg=self.E_larg,
                 E_Fermi=self.E_Fermi,
-                sigma_gauss=self.sigma_gauss , vibration=0.0
+                sigma_gauss=self.sigma_gauss,
+                vibration=0.0,
             )
         end_time = time.perf_counter()
-        
+
         total_time = end_time - start_time
         avg_time = total_time / n_calls
         calls_per_second = n_calls / total_time
-        
+
         print(f"\n{convolve_prepared.__name__}()")
         print(f" Performance with {n_calls} calls:")
         print(f"  Total time: {total_time:.3f} s")
@@ -106,16 +122,14 @@ class TestPerformanceGauss:
 
 if __name__ == "__main__":
     print("\nRunning performance test...")
-    
+
     perf_class = TestPerformanceGauss()
     perf_class.setup_method()
-    
-    perf_methods = [
-        'test_performance_many_calls'
-    ]
-    
+
+    perf_methods = ["test_performance_many_calls"]
+
     for method in perf_methods:
         getattr(perf_class, method)()
         print(f"[+] {method}")
-    
+
     print("\nAll tests passed!")
