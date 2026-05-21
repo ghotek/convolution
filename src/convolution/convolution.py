@@ -13,7 +13,6 @@ def convolve_prepared(
     e1: np.ndarray,
     e2: np.ndarray,
     extended_xanes: np.ndarray,
-    *,
     gamma_hole: float,
     gamma_max: float,
     E_cent: float,
@@ -55,7 +54,6 @@ def convolve_prepared(
 def convolve(
     energy: np.ndarray,
     xanes: np.ndarray,
-    *,
     gamma_hole: float,
     gamma_max: float,
     E_cent: float,
